@@ -7,6 +7,7 @@ import logging
 import telebot
 from telebot import util, types
 
+from bot import bot_channel_updater
 from rss_feed_parser.dto.company import Companies, Company
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
@@ -32,10 +33,10 @@ def start(message):
 @bot.message_handler(commands=['list'])
 def get_list(message):
     logger.info("Returning list of companies to user")
+    bot.send_message(message.chat.id, f"List of companies, which news you are track")
     with open('../foreign_companies.json', 'r') as f:
         companies = [Company(**cmp) for cmp in Companies(**json.load(f)).companies]
         comps = '\n'.join([f"{cmp.stock_index} - {cmp.name}" for cmp in companies])
-        bot.send_message(message.chat.id, f"List of companies, which news you are track")
         splitted_text = util.split_string(comps, 3000)
         for text in splitted_text:
             bot.send_message(message.chat.id, text, reply_markup=markup)
@@ -79,9 +80,13 @@ def actual_add_to_list(message):
     with open('../foreign_companies.json', 'w') as f:
         output = dataclasses.asdict(Companies(companies=companies))
         json.dump(output, f)
+    bot_channel_updater.update()
 
 
 if __name__ == '__main__':
+    if not os.path.exists("../foreign_companies.json"):
+        with open('../foreign_companies.json', 'w') as file:
+            logger.info(f"create file: foreign_companies.json")
     while True:
         try:
             logger.info('Polling bot')

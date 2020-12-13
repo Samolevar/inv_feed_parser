@@ -84,9 +84,6 @@ def actual_add_to_list(message):
 
 
 if __name__ == '__main__':
-    if not os.path.exists("../foreign_companies.json"):
-        with open('../foreign_companies.json', 'w') as file:
-            logger.info(f"create file: foreign_companies.json")
     while True:
         try:
             logger.info('Polling bot')

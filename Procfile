@@ -1,2 +1,2 @@
-clock: python ~/run.py
+clock: python run.py
 worker: python bot/main.py

@@ -1,4 +1,5 @@
 import logging
+import os
 import pickle
 
 import telebot
@@ -9,12 +10,12 @@ from rss_feed_parser.executors import updater
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-TOKEN = "Token"
-channel_name = "Channel name"
+TOKEN = str(os.environ['Token'])
+channel_name = str(os.environ['Channel'])
 bot = telebot.TeleBot(TOKEN)
 
 
-if __name__ == '__main__':
+def update():
     updater.update_yahoo_news()
     with open('../yahoo_result.pickle', 'rb') as result:
         for item in pickle.load(result):
@@ -23,3 +24,7 @@ if __name__ == '__main__':
                            f"{util.split_string(item.description, 600)[0]}\n" \
                            f"{item.link}"
             bot.send_message(channel_name, message_text)
+
+
+if __name__ == '__main__':
+    update()

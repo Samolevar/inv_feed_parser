@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import os
 import time
 import logging
 
@@ -11,8 +12,8 @@ from rss_feed_parser.dto.company import Companies, Company
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-TOKEN = "Token"
-channel_name = "Channel name"
+TOKEN = str(os.environ['Token'])
+channel_name = str(os.environ['Channel'])
 bot = telebot.TeleBot(TOKEN)
 
 markup = types.ReplyKeyboardMarkup(resize_keyboard=True)

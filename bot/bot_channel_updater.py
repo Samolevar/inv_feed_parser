@@ -17,7 +17,7 @@ bot = telebot.TeleBot(TOKEN)
 
 def update():
     updater.update_yahoo_news()
-    with open('../yahoo_result.pickle', 'rb') as result:
+    with open('yahoo_result.pickle', 'rb') as result:
         for item in pickle.load(result):
             message_text = f"#{item.company.name} #{item.company.stock_index}\n" \
                            f"{util.split_string(item.description, 600)[0]}\n" \

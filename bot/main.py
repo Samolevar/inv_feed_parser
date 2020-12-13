@@ -34,7 +34,7 @@ def start(message):
 def get_list(message):
     logger.info("Returning list of companies to user")
     bot.send_message(message.chat.id, f"List of companies, which news you are track")
-    with open('../foreign_companies.json', 'r') as f:
+    with open('foreign_companies.json', 'r') as f:
         companies = [Company(**cmp) for cmp in Companies(**json.load(f)).companies]
         comps = '\n'.join([f"{cmp.stock_index} - {cmp.name}" for cmp in companies])
         splitted_text = util.split_string(comps, 3000)
@@ -59,10 +59,10 @@ def actual_remove_from_list(message):
     _, index = message.text.split('/')
     logger.info(f"Removing company with stock index {index} from list of companies")
     companies = []
-    with open('../foreign_companies.json', 'r') as f:
+    with open('foreign_companies.json', 'r') as f:
         companies.extend([Company(**company) for company in Companies(**json.load(f)).companies if
                           Company(**company).stock_index != index])
-    with open('../foreign_companies.json', 'w') as f:
+    with open('foreign_companies.json', 'w') as f:
         output = dataclasses.asdict(Companies(companies=companies))
         json.dump(output, f)
 
@@ -73,11 +73,11 @@ def actual_add_to_list(message):
     logger.info(f"Adding company {name} with stock index {index} to list of companies")
     comp = Company(stock_index=index, name=name)
     companies = []
-    with open('../foreign_companies.json', 'r') as f:
+    with open('foreign_companies.json', 'r') as f:
         companies.extend(Companies(**json.load(f)).companies)
         if comp not in companies:
             companies.append(comp)
-    with open('../foreign_companies.json', 'w') as f:
+    with open('foreign_companies.json', 'w') as f:
         output = dataclasses.asdict(Companies(companies=companies))
         json.dump(output, f)
     bot_channel_updater.update()

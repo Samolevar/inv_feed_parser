@@ -11,7 +11,10 @@ sched = BlockingScheduler()
 @sched.scheduled_job('interval', minutes=1)
 def timed_job():
     logger.info("Update news")
-    bot_channel_updater.update()
+    try:
+        bot_channel_updater.update()
+    except Exception as e:
+        logger.exception(e)
 
 
 sched.start()

@@ -78,7 +78,11 @@ def actual_remove_from_list(message):
 def actual_add_to_list(message):
     index, name = message.text.split(':')
     logger.info(f"Adding company {name} with stock index {index} to list of companies")
-    cur.execute("insert into companies (stock_index, name) values (%s, %s)", (index, name))
+    try:
+        cur.execute("insert into companies (stock_index, name) values (%s, %s)", (index, name))
+    except psycopg2.errors.UniqueViolation:
+        bot.send_message(message.chat.id, "Company already exists", reply_markup=markup)
+        conn.rollback()
     bot_channel_updater.update(cur, conn)
     conn.commit()
 

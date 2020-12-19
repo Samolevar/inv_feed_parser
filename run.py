@@ -10,7 +10,6 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 sched = BlockingScheduler()
 
-
 DATABASE_URL = os.environ['DATABASE_URL']
 conn = psycopg2.connect(DATABASE_URL, sslmode='require')
 cur = conn.cursor()
@@ -20,7 +19,7 @@ def create_db_if_needed():
     cur.execute("CREATE TABLE IF NOT EXISTS articles "
                 "(link VARCHAR(255) PRIMARY KEY, date timestamp without time zone, article bytea);")
     cur.execute("CREATE TABLE IF NOT EXISTS companies "
-                "(id serial PRIMARY KEY, stock_index VARCHAR(255), name VARCHAR(255));")
+                "(stock_index VARCHAR(255) PRIMARY KEY, name VARCHAR(255));")
     conn.commit()
 
 

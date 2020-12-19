@@ -31,7 +31,7 @@ def create_db_if_needed():
     cur.execute("CREATE TABLE IF NOT EXISTS articles "
                 "(link VARCHAR(255) PRIMARY KEY, date timestamp without time zone, article bytea);")
     cur.execute("CREATE TABLE IF NOT EXISTS companies "
-                "(id serial PRIMARY KEY, stock_index VARCHAR(255), name VARCHAR(255));")
+                "(stock_index VARCHAR(255) PRIMARY KEY, name VARCHAR(255));")
     conn.commit()
 
 

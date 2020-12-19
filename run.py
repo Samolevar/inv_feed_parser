@@ -17,15 +17,10 @@ cur = conn.cursor()
 
 
 def create_db_if_needed():
-    cur.execute(f"EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE "
-                f"TABLE_SCHEMA = 'TheSchema' AND  TABLE_NAME = 'articles')")
-    if not bool(cur.rowcount):
-        cur.execute("CREATE TABLE articles (link VARCHAR(255) PRIMARY KEY, date DATETIME, article VARBINARY(max));")
-
-    cur.execute(f"EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE "
-                f"TABLE_SCHEMA = 'TheSchema' AND  TABLE_NAME = 'articles')")
-    if not bool(cur.rowcount):
-        cur.execute("CREATE TABLE companies (id serial PRIMARY KEY, stock_index VARCHAR(255), name VARCHAR(255));")
+    cur.execute("CREATE TABLE IF NOT EXISTS  articles "
+                "(link VARCHAR(255) PRIMARY KEY, date DATETIME, article VARBINARY(max));")
+    cur.execute("CREATE TABLE IF NOT EXISTS companies "
+                "(id serial PRIMARY KEY, stock_index VARCHAR(255), name VARCHAR(255));")
 
 
 @sched.scheduled_job('interval', hours=3)

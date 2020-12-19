@@ -17,10 +17,11 @@ cur = conn.cursor()
 
 
 def create_db_if_needed():
-    cur.execute("CREATE TABLE IF NOT EXISTS  articles "
+    cur.execute("CREATE TABLE IF NOT EXISTS articles "
                 "(link VARCHAR(255) PRIMARY KEY, date timestamp without time zone, article bytea);")
     cur.execute("CREATE TABLE IF NOT EXISTS companies "
                 "(id serial PRIMARY KEY, stock_index VARCHAR(255), name VARCHAR(255));")
+    conn.commit()
 
 
 @sched.scheduled_job('interval', hours=3)
@@ -29,6 +30,7 @@ def timed_job():
     try:
         cur.execute("TRUNCATE TABLE articles")
         bot_channel_updater.update(cur)
+        conn.commit()
     except Exception as e:
         logger.exception(e)
 

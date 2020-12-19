@@ -28,10 +28,11 @@ cur = conn.cursor()
 
 
 def create_db_if_needed():
-    cur.execute("CREATE TABLE IF NOT EXISTS  articles "
+    cur.execute("CREATE TABLE IF NOT EXISTS articles "
                 "(link VARCHAR(255) PRIMARY KEY, date timestamp without time zone, article bytea);")
     cur.execute("CREATE TABLE IF NOT EXISTS companies "
                 "(id serial PRIMARY KEY, stock_index VARCHAR(255), name VARCHAR(255));")
+    conn.commit()
 
 
 @bot.message_handler(commands=['start'])
@@ -50,6 +51,7 @@ def get_list(message):
     splitted_text = util.split_string(comps, 3000)
     for text in splitted_text:
         bot.send_message(message.chat.id, text, reply_markup=markup)
+    conn.commit()
 
 
 @bot.message_handler(commands=['add'])
@@ -69,14 +71,16 @@ def actual_remove_from_list(message):
     _, index = message.text.split('/')
     logger.info(f"Removing company with stock index {index} from list of companies")
     cur.execute(f"delete from companies where stock_index='{index}';")
+    conn.commit()
 
 
 @bot.message_handler(func=lambda message: ':' in message.text)
 def actual_add_to_list(message):
     index, name = message.text.split(':')
     logger.info(f"Adding company {name} with stock index {index} to list of companies")
-    cur.execute(f"insert into companies (stock_index, name, article) values ({index}, {name})")
+    cur.execute(f"insert into companies (stock_index, name) values ({index}, {name})")
     bot_channel_updater.update(cur)
+    conn.commit()
 
 
 if __name__ == '__main__':

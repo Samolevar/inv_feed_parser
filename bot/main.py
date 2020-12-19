@@ -28,11 +28,11 @@ cur = conn.cursor()
 
 
 def create_db_if_needed():
-    cur.execute(f"select * from information_schema.tables where table_name=articles")
+    cur.execute(f"select * from articles")
     if not bool(cur.rowcount):
         cur.execute("CREATE TABLE articles (link VARCHAR(255) PRIMARY KEY, date DATETIME, article VARBINARY(max));")
 
-    cur.execute(f"select * from information_schema.tables where table_name=companies")
+    cur.execute(f"select * companies")
     if not bool(cur.rowcount):
         cur.execute("CREATE TABLE companies (id serial PRIMARY KEY, stock_index VARCHAR(255), name VARCHAR(255));")
 

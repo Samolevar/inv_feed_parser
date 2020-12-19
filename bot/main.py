@@ -1,14 +1,13 @@
-import dataclasses
-import json
 import os
 import time
 import logging
 
+import psycopg2
 import telebot
 from telebot import util, types
 
 from bot import bot_channel_updater
-from rss_feed_parser.dto.company import Companies, Company
+from rss_feed_parser.dto.company import Company
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -23,6 +22,20 @@ lst = types.KeyboardButton('/list')
 rmv = types.KeyboardButton('/remove')
 markup.row(add, lst, rmv)
 
+DATABASE_URL = os.environ['DATABASE_URL']
+conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+cur = conn.cursor()
+
+
+def create_db_if_needed():
+    cur.execute(f"select * from information_schema.tables where table_name=articles")
+    if not bool(cur.rowcount):
+        cur.execute("CREATE TABLE articles (link VARCHAR(255) PRIMARY KEY, date DATETIME, article VARBINARY(max));")
+
+    cur.execute(f"select * from information_schema.tables where table_name=companies")
+    if not bool(cur.rowcount):
+        cur.execute("CREATE TABLE companies (id serial PRIMARY KEY, stock_index VARCHAR(255), name VARCHAR(255));")
+
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -34,12 +47,12 @@ def start(message):
 def get_list(message):
     logger.info("Returning list of companies to user")
     bot.send_message(message.chat.id, f"List of companies, which news you are track")
-    with open('foreign_companies.json', 'r') as f:
-        companies = [Company(**cmp) for cmp in Companies(**json.load(f)).companies]
-        comps = '\n'.join([f"{cmp.stock_index} - {cmp.name}" for cmp in companies])
-        splitted_text = util.split_string(comps, 3000)
-        for text in splitted_text:
-            bot.send_message(message.chat.id, text, reply_markup=markup)
+    cur.execute("select * from companies;")
+    companies = [Company(*cmp) for cmp in cur]
+    comps = '\n'.join([f"{cmp.stock_index} - {cmp.name}" for cmp in companies])
+    splitted_text = util.split_string(comps, 3000)
+    for text in splitted_text:
+        bot.send_message(message.chat.id, text, reply_markup=markup)
 
 
 @bot.message_handler(commands=['add'])
@@ -58,32 +71,19 @@ def delete_from_list(message):
 def actual_remove_from_list(message):
     _, index = message.text.split('/')
     logger.info(f"Removing company with stock index {index} from list of companies")
-    companies = []
-    with open('foreign_companies.json', 'r') as f:
-        companies.extend([Company(**company) for company in Companies(**json.load(f)).companies if
-                          Company(**company).stock_index != index])
-    with open('foreign_companies.json', 'w') as f:
-        output = dataclasses.asdict(Companies(companies=companies))
-        json.dump(output, f)
+    cur.execute(f"delete from companies where stock_index='{index}';")
 
 
 @bot.message_handler(func=lambda message: ':' in message.text)
 def actual_add_to_list(message):
     index, name = message.text.split(':')
     logger.info(f"Adding company {name} with stock index {index} to list of companies")
-    comp = Company(stock_index=index, name=name)
-    companies = []
-    with open('foreign_companies.json', 'r') as f:
-        companies.extend(Companies(**json.load(f)).companies)
-        if comp not in companies:
-            companies.append(comp)
-    with open('foreign_companies.json', 'w') as f:
-        output = dataclasses.asdict(Companies(companies=companies))
-        json.dump(output, f)
-    bot_channel_updater.update()
+    cur.execute(f"insert into companies (stock_index, name, article) values ({index}, {name})")
+    bot_channel_updater.update(cur)
 
 
 if __name__ == '__main__':
+    create_db_if_needed()
     while True:
         try:
             logger.info('Polling bot')

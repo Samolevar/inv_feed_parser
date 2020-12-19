@@ -15,9 +15,9 @@ channel_name = str(os.environ['Channel'])
 bot = telebot.TeleBot(TOKEN)
 
 
-def update(cur):
+def update(cur, conn):
     try:
-        updater.update_yahoo_news(cur)
+        updater.update_yahoo_news(cur, conn)
         cur.execute("select * from articles;")
         for record in cur:
             for item in pickle.load(record[2]):

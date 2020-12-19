@@ -78,8 +78,8 @@ def actual_remove_from_list(message):
 def actual_add_to_list(message):
     index, name = message.text.split(':')
     logger.info(f"Adding company {name} with stock index {index} to list of companies")
-    cur.execute(f"insert into companies (stock_index, name) values ({index}, {name})")
-    bot_channel_updater.update(cur)
+    cur.execute("insert into companies (stock_index, name) values (%s, %s)", (index, name))
+    bot_channel_updater.update(cur, conn)
     conn.commit()
 
 

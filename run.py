@@ -29,7 +29,7 @@ def timed_job():
     logger.info("Update news")
     try:
         cur.execute("TRUNCATE TABLE articles")
-        bot_channel_updater.update(cur)
+        bot_channel_updater.update(cur, conn)
         conn.commit()
     except Exception as e:
         logger.exception(e)

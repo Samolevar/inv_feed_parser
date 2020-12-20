@@ -17,7 +17,8 @@ cur = conn.cursor()
 
 def create_db_if_needed():
     cur.execute("CREATE TABLE IF NOT EXISTS articles "
-                "(link VARCHAR(255) PRIMARY KEY, date timestamp without time zone, article bytea);")
+                "(link VARCHAR(255) PRIMARY KEY, stock_index VARCHAR(255), "
+                "date timestamp without time zone, article bytea);")
     cur.execute("CREATE TABLE IF NOT EXISTS companies "
                 "(stock_index VARCHAR(255) PRIMARY KEY, name VARCHAR(255));")
     conn.commit()
@@ -31,6 +32,7 @@ def timed_job():
         bot_channel_updater.update(cur, conn)
         conn.commit()
     except Exception as e:
+        conn.rollback()
         logger.exception(e)
 
 

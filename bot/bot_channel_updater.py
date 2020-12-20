@@ -20,10 +20,30 @@ def update(cur, conn):
         updater.update_yahoo_news(cur, conn)
         cur.execute("select * from articles;")
         for record in cur:
-            for item in pickle.load(record[2]):
-                message_text = f"#{item.company.name} #{item.company.stock_index}\n" \
-                               f"{util.split_string(item.description, 600)[0]}\n" \
-                               f"{item.link}"
-                bot.send_message(channel_name, message_text)
+            logger.info(f"Parse {record}")
+            item = pickle.loads(record[3])
+            logger.info(f"Send message {item}")
+            message_text = f"#{item.company.name} #{item.company.stock_index}\n" \
+                           f"{util.split_string(item.description, 600)[0]}\n" \
+                           f"{item.link}"
+            bot.send_message(channel_name, message_text)
+            conn.commit()
+    except Exception as e:
+        logger.exception(e)
+
+
+def update_for_one_company(cur, conn, company):
+    try:
+        updater.update_one_company_news(cur, conn, company)
+        cur.execute(f"select * from articles where stock_index='{company.stock_index}';")
+        for record in cur:
+            logger.info(f"Parse {record}")
+            item = pickle.loads(record[3])
+            logger.info(f"Send message {item}")
+            message_text = f"#{item.company.name} #{item.company.stock_index}\n" \
+                           f"{util.split_string(item.description, 600)[0]}\n" \
+                           f"{item.link}"
+            bot.send_message(channel_name, message_text)
+            conn.commit()
     except Exception as e:
         logger.exception(e)

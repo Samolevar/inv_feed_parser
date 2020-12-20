@@ -29,7 +29,8 @@ cur = conn.cursor()
 
 def create_db_if_needed():
     cur.execute("CREATE TABLE IF NOT EXISTS articles "
-                "(link VARCHAR(255) PRIMARY KEY, date timestamp without time zone, article bytea);")
+                "(link VARCHAR(255) PRIMARY KEY, stock_index VARCHAR(255), "
+                "date timestamp without time zone, article bytea);")
     cur.execute("CREATE TABLE IF NOT EXISTS companies "
                 "(stock_index VARCHAR(255) PRIMARY KEY, name VARCHAR(255));")
     conn.commit()
@@ -83,7 +84,7 @@ def actual_add_to_list(message):
     except psycopg2.errors.UniqueViolation:
         bot.send_message(message.chat.id, "Company already exists", reply_markup=markup)
         conn.rollback()
-    bot_channel_updater.update(cur, conn)
+    bot_channel_updater.update_for_one_company(cur, conn, Company(stock_index=index, name=name))
     conn.commit()
 
 

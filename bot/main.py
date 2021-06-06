@@ -85,7 +85,6 @@ def send_train_data(message):
         conn.close()
         data_grabber.send_to_disk(f'{date}.csv')
         os.remove(f'{date}.csv')
-        conn.commit()
     except Exception as exp:
         conn.rollback()
         logger.exception(exp)

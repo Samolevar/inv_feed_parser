@@ -66,7 +66,6 @@ def timed_job():
         conn.close()
         data_grabber.send_to_disk(f'{date}.csv')
         os.remove(f'{date}.csv')
-        conn.commit()
     except Exception as e:
         conn.rollback()
         logger.exception(e)

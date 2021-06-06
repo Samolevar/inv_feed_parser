@@ -77,17 +77,19 @@ def add_to_list(message):
 def send_train_data(message):
     bot.send_message(message.chat.id, "Sending current state of train data to disk", reply_markup=markup)
     logger.info("Grab data")
-    try:
-        train_data = "COPY train TO STDOUT WITH CSV HEADER"
-        date = datetime.strftime(datetime.now(), "%d.%m.%Y-%H.%M.%S")
-        with open(f'{date}.csv', 'w') as f:
-            cur.copy_expert(train_data, f)
-        conn.close()
-        data_grabber.send_to_disk(f'{date}.csv')
-        os.remove(f'{date}.csv')
-    except Exception as exp:
-        conn.rollback()
-        logger.exception(exp)
+    with conn, cur:
+        try:
+            data_grabber.prepare_train_table(cur, conn)
+            train_data = "COPY train TO STDOUT WITH CSV HEADER"
+            date = datetime.strftime(datetime.now(), "%d.%m.%Y-%H.%M.%S")
+            with open(f'{date}.csv', 'w') as f:
+                cur.copy_expert(train_data, f)
+            conn.close()
+            data_grabber.send_to_disk(f'{date}.csv')
+            os.remove(f'{date}.csv')
+        except Exception as exp:
+            conn.rollback()
+            logger.exception(exp)
 
 
 @bot.message_handler(commands=['remove'])

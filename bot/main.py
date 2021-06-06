@@ -1,12 +1,14 @@
 import os
 import time
 import logging
+from datetime import datetime
 
 import psycopg2
 import telebot
 from telebot import util, types
 
 from bot import bot_channel_updater
+from model import data_grabber
 from rss_feed_parser.dto.company import Company
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
@@ -20,7 +22,8 @@ markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 add = types.KeyboardButton('/add')
 lst = types.KeyboardButton('/list')
 rmv = types.KeyboardButton('/remove')
-markup.row(add, lst, rmv)
+trn = types.KeyboardButton('/train')
+markup.row(add, lst, rmv, trn)
 
 DATABASE_URL = os.environ['DATABASE_URL']
 conn = psycopg2.connect(DATABASE_URL, sslmode='require')
@@ -68,6 +71,24 @@ def get_list(message):
 def add_to_list(message):
     bot.send_message(message.chat.id, "If you want to add new company to list, send me pair "
                                       "StockIndex:FullNameOfCompany", reply_markup=markup)
+
+
+@bot.message_handler(commands=['train'])
+def send_train_data(message):
+    bot.send_message(message.chat.id, "Sending current state of train data to disk", reply_markup=markup)
+    logger.info("Grab data")
+    try:
+        train_data = "COPY train TO STDOUT WITH CSV HEADER"
+        date = datetime.strftime(datetime.now(), "%d.%m.%Y-%H.%M.%S")
+        with open(f'{date}.csv', 'w') as f:
+            cur.copy_expert(train_data, f)
+        conn.close()
+        data_grabber.send_to_disk(f'{date}.csv')
+        os.remove(f'{date}.csv')
+        conn.commit()
+    except Exception as exp:
+        conn.rollback()
+        logger.exception(exp)
 
 
 @bot.message_handler(commands=['remove'])

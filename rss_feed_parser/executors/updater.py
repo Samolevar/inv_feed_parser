@@ -30,6 +30,9 @@ def update_yahoo_news(cur, conn):
             try:
                 cur.execute(f"insert into articles (link, stock_index, date, article) values (%s,  %s, %s, %s)",
                             (article.link, article.company.stock_index, article.date, pickle.dumps(article)))
+                cur.execute(
+                    f"insert into train (link, stock_index, company_name, date, article values (%s, %s, %s, %s, %s)",
+                    (article.link, article.company.stock_index, article.company.name, article.date, pickle.dumps(article)))
             except psycopg2.errors.UniqueViolation:
                 conn.rollback()
                 continue
@@ -45,6 +48,9 @@ def update_one_company_news(cur, conn, company):
         try:
             cur.execute(f"insert into articles (link, stock_index, date, article) values (%s, %s, %s, %s)",
                         (article.link, article.company.stock_index, article.date, pickle.dumps(article)))
+            cur.execute(
+                f"insert into train (link, stock_index, company_name, date, article values (%s, %s, %s, %s, %s)",
+                (article.link, article.company.stock_index, article.company.name, article.date, pickle.dumps(article)))
         except psycopg2.errors.UniqueViolation:
             conn.rollback()
             continue

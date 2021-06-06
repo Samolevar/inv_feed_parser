@@ -11,3 +11,4 @@ setuptools>=51.0.0
 pytz>=2020.4
 APScheduler>=3.6.3
 psycopg2-binary>=2.8.6
+yadisk>=1.2.14

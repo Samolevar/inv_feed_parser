@@ -29,25 +29,26 @@ markup.row(add, lst, rmv, trn)
 
 DATABASE_URL = os.environ['DATABASE_URL']
 conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-cur = conn.cursor()
 
 
 def create_db_if_needed():
-    cur.execute("CREATE TABLE IF NOT EXISTS articles "
-                "(link VARCHAR(255) PRIMARY KEY, stock_index VARCHAR(255), "
-                "date timestamp without time zone, article bytea);")
-    cur.execute("CREATE TABLE IF NOT EXISTS companies "
-                "(stock_index VARCHAR(255) PRIMARY KEY, name VARCHAR(255));")
-    cur.execute("CREATE TABLE IF NOT EXISTS channels "
-                "(channel VARCHAR(255) PRIMARY KEY, name VARCHAR(255));")
-    cur.execute("Create TABLE IF NOT EXISTS train "
-                "(link VARCHAR(255) PRIMARY KEY, stock_index VARCHAR(255),"
-                "company_name VARCHAR(255), date timestamp without time zone, article bytea);")
     try:
-        cur.execute("insert into channels (channel, name) values (%s, %s)", (channel_name, "Polina"))
+        with conn.cursor() as cur:
+            cur.execute("CREATE TABLE IF NOT EXISTS articles "
+                        "(link VARCHAR(255) PRIMARY KEY, stock_index VARCHAR(255), "
+                        "date timestamp without time zone, article bytea);")
+            cur.execute("CREATE TABLE IF NOT EXISTS companies "
+                        "(stock_index VARCHAR(255) PRIMARY KEY, name VARCHAR(255));")
+            cur.execute("CREATE TABLE IF NOT EXISTS channels "
+                        "(channel VARCHAR(255) PRIMARY KEY, name VARCHAR(255));")
+            cur.execute("Create TABLE IF NOT EXISTS train "
+                        "(link VARCHAR(255) PRIMARY KEY, stock_index VARCHAR(255),"
+                        "company_name VARCHAR(255), date timestamp without time zone, article bytea);")
+            cur.execute("insert into channels (channel, name) values (%s, %s)", (channel_name, "Polina"))
     except psycopg2.errors.UniqueViolation:
         conn.rollback()
-    conn.commit()
+    finally:
+        conn.close()
 
 
 @bot.message_handler(commands=['start'])
@@ -60,13 +61,18 @@ def start(message):
 def get_list(message):
     logger.info("Returning list of companies to user")
     bot.send_message(message.chat.id, f"List of companies, which news you are track")
-    cur.execute("select * from companies;")
-    companies = [Company(*cmp) for cmp in cur]
+    try:
+        with conn.cursor() as cur:
+            cur.execute("select * from companies;")
+            companies = [Company(*cmp) for cmp in cur]
+    except Exception as exp:
+        logger.exception(exp)
+    finally:
+        conn.close()
     comps = '\n'.join([f"{cmp.stock_index} - {cmp.name}" for cmp in companies])
-    splitted_text = util.split_string(comps, 3000)
-    for text in splitted_text:
+    divided_text = util.split_string(comps, 3000)
+    for text in divided_text:
         bot.send_message(message.chat.id, text, reply_markup=markup)
-    conn.commit()
 
 
 @bot.message_handler(commands=['add'])
@@ -79,24 +85,26 @@ def add_to_list(message):
 def send_train_data(message):
     bot.send_message(message.chat.id, "Sending current state of train data to disk", reply_markup=markup)
     logger.info("Grab data")
-    with conn, cur:
-        try:
-            data_grabber.prepare_train_table(cur, conn)
-            dct_list = []
+    dct_list = []
+    try:
+        with conn.cursor() as cur:
+            data_grabber.prepare_train_table(conn)
             cur.execute("select * from train")
             for record in cur:
                 logger.info(f"Parse {record}")
                 item = pickle.loads(record[4])
                 dct_list.append({"link": record[0], "stock_index": record[1],
                                  "company_name": record[2], "date": record[3], "article": item})
-            df = pd.DataFrame(dct_list)
-            date = datetime.strftime(datetime.now(), "%d.%m.%Y-%H.%M.%S")
-            df.to_csv(f'{date}.csv', encoding='utf-8', index=False)
-            data_grabber.send_to_disk(f'{date}.csv')
-            os.remove(f'{date}.csv')
-        except Exception as exp:
-            conn.rollback()
-            logger.exception(exp)
+    except Exception as exp:
+        conn.rollback()
+        logger.exception(exp)
+    finally:
+        conn.close()
+    df = pd.DataFrame(dct_list)
+    date = datetime.strftime(datetime.now(), "%d.%m.%Y-%H.%M.%S")
+    df.to_csv(f'{date}.csv', encoding='utf-8', index=False)
+    data_grabber.send_to_disk(f'{date}.csv')
+    os.remove(f'{date}.csv')
 
 
 @bot.message_handler(commands=['remove'])
@@ -109,8 +117,14 @@ def delete_from_list(message):
 def actual_remove_from_list(message):
     _, index = message.text.split('/')
     logger.info(f"Removing company with stock index {index} from list of companies")
-    cur.execute(f"delete from companies where stock_index='{index}';")
-    conn.commit()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(f"delete from companies where stock_index='{index}';")
+    except Exception as exp:
+        conn.rollback()
+        logger.exception(exp)
+    finally:
+        conn.close()
 
 
 @bot.message_handler(func=lambda message: ':' in message.text)
@@ -118,12 +132,14 @@ def actual_add_to_list(message):
     index, name = message.text.split(':')
     logger.info(f"Adding company {name} with stock index {index} to list of companies")
     try:
-        cur.execute("insert into companies (stock_index, name) values (%s, %s)", (index, name))
+        with conn.cursor() as cur:
+            cur.execute("insert into companies (stock_index, name) values (%s, %s)", (index, name))
+            bot_channel_updater.update_for_one_company(conn, Company(stock_index=index, name=name))
     except psycopg2.errors.UniqueViolation:
         bot.send_message(message.chat.id, "Company already exists", reply_markup=markup)
         conn.rollback()
-    bot_channel_updater.update_for_one_company(cur, conn, Company(stock_index=index, name=name))
-    conn.commit()
+    finally:
+        conn.close()
 
 
 if __name__ == '__main__':

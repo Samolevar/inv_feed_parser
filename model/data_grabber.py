@@ -8,9 +8,14 @@ logger = logging.getLogger(__name__)
 ya_token = os.environ['ya_tkn']
 
 
-def prepare_train_table(cur, conn):
-    cur.execute("insert into train (link, stock_index, date, article) select link, stock_index, date, article from articles")
-    conn.commit()
+def prepare_train_table(conn):
+    try:
+        with conn.cursor as cur:
+            cur.execute("insert into train (link, stock_index, date, article) "
+                        "select link, stock_index, date, article from articles")
+    except Exception as exp:
+        conn.rollback()
+        logger.exception(exp)
 
 
 def send_to_disk(file):

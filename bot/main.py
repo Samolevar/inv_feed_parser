@@ -1,8 +1,10 @@
 import os
+import pickle
 import time
 import logging
 from datetime import datetime
 
+import pandas as pd
 import psycopg2
 import telebot
 from telebot import util, types
@@ -80,11 +82,16 @@ def send_train_data(message):
     with conn, cur:
         try:
             data_grabber.prepare_train_table(cur, conn)
-            train_data = "COPY train TO STDOUT WITH CSV HEADER"
+            dct_list = []
+            cur.execute("select * from train")
+            for record in cur:
+                logger.info(f"Parse {record}")
+                item = pickle.loads(record[4])
+                dct_list.append({"link": record[0], "stock_index": record[1],
+                                 "company_name": record[2], "date": record[3], "article": item})
+            df = pd.DataFrame(dct_list)
             date = datetime.strftime(datetime.now(), "%d.%m.%Y-%H.%M.%S")
-            with open(f'{date}.csv', 'w') as f:
-                cur.copy_expert(train_data, f)
-            conn.close()
+            df.to_csv(f'{date}.csv', encoding='utf-8', index=False)
             data_grabber.send_to_disk(f'{date}.csv')
             os.remove(f'{date}.csv')
         except Exception as exp:

@@ -1,11 +1,9 @@
 import logging
-import os
+import helpers.settings as settings
 import yadisk
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-ya_token = os.environ['ya_tkn']
 
 
 def prepare_train_table(conn):
@@ -19,6 +17,6 @@ def prepare_train_table(conn):
 
 
 def send_to_disk(file):
-    y = yadisk.YaDisk(token=ya_token)
+    y = yadisk.YaDisk(token=settings.ya_token)
     logger.info(f"Upload file {file}")
     y.upload(file, f'/inv_feed_bot_train/{file}')

@@ -10,15 +10,15 @@ import telebot
 from telebot import util, types
 
 from bot import bot_channel_updater
+from helpers.db.tables import create_tables_if_needed
 from model import data_grabber
 from rss_feed_parser.dto.company import Company
+import helpers.settings as settings
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-TOKEN = str(os.environ['Token'])
-channel_name = str(os.environ['Channel'])
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(settings.token)
 
 markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 add = types.KeyboardButton('/add')
@@ -27,28 +27,7 @@ rmv = types.KeyboardButton('/remove')
 trn = types.KeyboardButton('/train')
 markup.row(add, lst, rmv, trn)
 
-DATABASE_URL = os.environ['DATABASE_URL']
-conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-
-
-def create_db_if_needed():
-    try:
-        with conn.cursor() as cur:
-            cur.execute("CREATE TABLE IF NOT EXISTS articles "
-                        "(link VARCHAR(255) PRIMARY KEY, stock_index VARCHAR(255), "
-                        "date timestamp without time zone, article bytea);")
-            cur.execute("CREATE TABLE IF NOT EXISTS companies "
-                        "(stock_index VARCHAR(255) PRIMARY KEY, name VARCHAR(255));")
-            cur.execute("CREATE TABLE IF NOT EXISTS channels "
-                        "(channel VARCHAR(255) PRIMARY KEY, name VARCHAR(255));")
-            cur.execute("Create TABLE IF NOT EXISTS train "
-                        "(link VARCHAR(255) PRIMARY KEY, stock_index VARCHAR(255),"
-                        "company_name VARCHAR(255), date timestamp without time zone, article bytea);")
-            cur.execute("insert into channels (channel, name) values (%s, %s)", (channel_name, "Polina"))
-    except psycopg2.errors.UniqueViolation:
-        conn.rollback()
-    finally:
-        conn.close()
+conn = psycopg2.connect(settings.database_url, sslmode='require')
 
 
 @bot.message_handler(commands=['start'])
@@ -143,7 +122,7 @@ def actual_add_to_list(message):
 
 
 if __name__ == '__main__':
-    create_db_if_needed()
+    create_tables_if_needed(conn, settings.channel_name)
     while True:
         try:
             logger.info('Polling bot')

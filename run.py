@@ -5,39 +5,19 @@ from datetime import datetime
 import pandas as pd
 
 import psycopg2
+import helpers.settings as settings
 from apscheduler.job import Job
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from bot import bot_channel_updater
+from helpers.db.tables import create_tables_if_needed
 from model import data_grabber
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 sched = BlockingScheduler()
 
-channel_name = str(os.environ['Channel'])
-DATABASE_URL = os.environ['DATABASE_URL']
-conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-
-
-def create_db_if_needed():
-    try:
-        with conn, conn.cursor() as cur:
-            cur.execute("CREATE TABLE IF NOT EXISTS articles "
-                        "(link VARCHAR(255) PRIMARY KEY, stock_index VARCHAR(255), "
-                        "date timestamp without time zone, article bytea);")
-            cur.execute("CREATE TABLE IF NOT EXISTS companies "
-                        "(stock_index VARCHAR(255) PRIMARY KEY, name VARCHAR(255));")
-            cur.execute("CREATE TABLE IF NOT EXISTS channels "
-                        "(channel VARCHAR(255) PRIMARY KEY, name VARCHAR(255));")
-            cur.execute("Create TABLE IF NOT EXISTS train "
-                        "(link VARCHAR(255) PRIMARY KEY, stock_index VARCHAR(255),"
-                        "company_name VARCHAR(255), date timestamp without time zone, article bytea);")
-            cur.execute("insert into channels (channel, name) values (%s, %s)", (channel_name, "Polina"))
-    except psycopg2.errors.UniqueViolation:
-        conn.rollback()
-    finally:
-        conn.close()
+conn = psycopg2.connect(settings.database_url, sslmode='require')
 
 
 @sched.scheduled_job('interval', hours=3, id="update")
@@ -83,5 +63,5 @@ def timed_job():
         conn.close()
 
 
-create_db_if_needed()
+create_tables_if_needed(conn, settings.channel_name)
 sched.start()
